@@ -22,7 +22,7 @@
         }
         .container-div { 
             position: absolute; 
-            background-color: rgba(255, 0, 0, 0.5); /* Solid red with 50% opacity */
+            background-color: rgba(255, 0, 0, 0.5); /* Semi-transparent red */
             border: 2px solid black; 
             box-sizing: border-box; 
         }
@@ -89,8 +89,13 @@
             let gray = new cv.Mat();
             let edges = new cv.Mat();
 
+            // Enhance contrast
             cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-            cv.Canny(gray, edges, 50, 150);
+            let equalized = new cv.Mat();
+            cv.equalizeHist(gray, equalized);
+
+            // Adjust Canny thresholds for larger edges
+            cv.Canny(equalized, edges, 30, 100); // Lower thresholds to capture drawer edges
 
             let contours = new cv.MatVector();
             let hierarchy = new cv.Mat();
@@ -108,9 +113,10 @@
                 rect.width = rect.width * scaleX;
                 rect.height = rect.height * scaleY;
 
-                if (rect.width > 30 && rect.height > 20) {
+                // Filter by size and aspect ratio (drawers are wider than tall)
+                if (rect.width > 50 && rect.height > 30 && rect.width / rect.height > 1.2 && rect.width / rect.height < 3) {
                     containers.push(rect);
-                    console.log(`Detected rect at (${rect.x.toFixed(2)}, ${rect.y.toFixed(2)}), w=${rect.width.toFixed(2)}, h=${rect.height.toFixed(2)}`);
+                    console.log(`Detected rect at (${rect.x.toFixed(2)}, ${rect.y.toFixed(2)}), w=${rect.width.toFixed(2)}, h=${rect.height.toFixed(2)}, ratio=${(rect.width / rect.height).toFixed(2)}`);
 
                     const div = document.createElement('div');
                     div.className = 'container-div';
@@ -127,7 +133,7 @@
             }
 
             document.getElementById('output').innerText = `Found ${containers.length} containers`;
-            src.delete(); gray.delete(); edges.delete(); contours.delete(); hierarchy.delete();
+            src.delete(); gray.delete(); edges.delete(); equalized.delete(); contours.delete(); hierarchy.delete();
         }
     </script>
 
