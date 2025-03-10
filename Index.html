@@ -11,6 +11,7 @@
             align-items: center; 
             font-family: Arial, sans-serif; 
             margin: 0; 
+            padding: 10px; 
         }
         #container { 
             position: relative; 
@@ -22,7 +23,7 @@
         }
         .container-div { 
             position: absolute; 
-            background-color: rgba(255, 0, 0, 0.5); /* Semi-transparent red */
+            background-color: rgba(255, 0, 0, 0.5); 
             border: 2px solid black; 
             box-sizing: border-box; 
         }
@@ -30,113 +31,5 @@
             margin-top: 10px; 
             font-size: 16px; 
         }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
-</head>
-<body>
-    <h2>Upload an Image</h2>
-    <input type="file" id="imageInput" accept="image/*">
-    <div id="container">
-        <img id="image" src="" alt="Uploaded Image">
-    </div>
-    <div id="output"></div>
-
-    <script type="text/javascript">
-        let containers = [];
-
-        function onOpenCvReady() {
-            console.log('OpenCV.js is ready');
-            if (typeof cv === 'undefined') {
-                console.error('OpenCV.js failed to load');
-                document.getElementById('output').innerText = 'Error: OpenCV.js not loaded';
-                return;
-            }
-            document.getElementById('imageInput').addEventListener('change', handleImageUpload);
-        }
-
-        function handleImageUpload(event) {
-            console.log('File selected:', event.target.files[0]);
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const imgElement = document.getElementById('image');
-            imgElement.src = URL.createObjectURL(file);
-            imgElement.onload = () => {
-                console.log('Image loaded: ', imgElement.naturalWidth, 'x', imgElement.naturalHeight);
-                processImage(imgElement);
-            };
-        }
-
-        function processImage(imgElement) {
-            console.log('Processing image...');
-            const container = document.getElementById('container');
-            container.style.width = imgElement.width + 'px';
-            container.style.height = imgElement.height + 'px';
-
-            // Clear previous divs
-            const existingDivs = container.getElementsByClassName('container-div');
-            while (existingDivs.length > 0) existingDivs[0].remove();
-
-            // Temporary canvas for OpenCV
-            const canvas = document.createElement('canvas');
-            canvas.width = imgElement.naturalWidth;
-            canvas.height = imgElement.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
-
-            let src = cv.imread(canvas);
-            let gray = new cv.Mat();
-            let edges = new cv.Mat();
-
-            // Enhance contrast
-            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-            let equalized = new cv.Mat();
-            cv.equalizeHist(gray, equalized);
-
-            // Adjust Canny thresholds for larger edges
-            cv.Canny(equalized, edges, 30, 100); // Lower thresholds to capture drawer edges
-
-            let contours = new cv.MatVector();
-            let hierarchy = new cv.Mat();
-            cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-            containers = [];
-            console.log('Number of contours found:', contours.size());
-            for (let i = 0; i < contours.size(); i++) {
-                let contour = contours.get(i);
-                let rect = cv.boundingRect(contour);
-                const scaleX = imgElement.width / imgElement.naturalWidth;
-                const scaleY = imgElement.height / imgElement.naturalHeight;
-                rect.x = rect.x * scaleX;
-                rect.y = rect.y * scaleY;
-                rect.width = rect.width * scaleX;
-                rect.height = rect.height * scaleY;
-
-                // Filter by size and aspect ratio (drawers are wider than tall)
-                if (rect.width > 50 && rect.height > 30 && rect.width / rect.height > 1.2 && rect.width / rect.height < 3) {
-                    containers.push(rect);
-                    console.log(`Detected rect at (${rect.x.toFixed(2)}, ${rect.y.toFixed(2)}), w=${rect.width.toFixed(2)}, h=${rect.height.toFixed(2)}, ratio=${(rect.width / rect.height).toFixed(2)}`);
-
-                    const div = document.createElement('div');
-                    div.className = 'container-div';
-                    div.style.left = rect.x + 'px';
-                    div.style.top = rect.y + 'px';
-                    div.style.width = rect.width + 'px';
-                    div.style.height = rect.height + 'px';
-                    div.addEventListener('click', () => {
-                        document.getElementById('output').innerText = `Selected container at (${Math.round(rect.x)}, ${Math.round(rect.y)})`;
-                        console.log(`Selected: x=${rect.x}, y=${rect.y}, w=${rect.width}, h=${rect.height}`);
-                    });
-                    container.appendChild(div);
-                }
-            }
-
-            document.getElementById('output').innerText = `Found ${containers.length} containers`;
-            src.delete(); gray.delete(); edges.delete(); equalized.delete(); contours.delete(); hierarchy.delete();
-        }
-    </script>
-
-    <script src="https://docs.opencv.org/4.5.5/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
-</body>
-</html>
+        #config { 
+            margin:
