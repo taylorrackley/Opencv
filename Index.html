@@ -32,4 +32,221 @@
             font-size: 16px; 
         }
         #config { 
-            margin:
+            margin: 10px 0; 
+            width: 100%; 
+            max-width: 400px; 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 5px; 
+        }
+        #config label { 
+            display: block; 
+            margin: 5px 0; 
+        }
+        #config input[type="range"] { 
+            width: 100%; 
+        }
+        #config input[type="checkbox"] { 
+            margin-right: 5px; 
+        }
+        #config button { 
+            margin-top: 10px; 
+            padding: 5px 10px; 
+        }
+        #config-output { 
+            margin-top: 10px; 
+            font-size: 14px; 
+            word-wrap: break-word; 
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
+</head>
+<body>
+    <h2>Upload an Image</h2>
+    <input type="file" id="imageInput" accept="image/*">
+    <div id="config">
+        <h3>Configuration</h3>
+        <label>Canny Low Threshold: <span id="cannyLowValue">30</span>
+            <input type="range" id="cannyLow" min="10" max="200" value="30">
+        </label>
+        <label>Canny High Threshold: <span id="cannyHighValue">100</span>
+            <input type="range" id="cannyHigh" min="50" max="300" value="100">
+        </label>
+        <label>Min Width: <span id="minWidthValue">50</span>
+            <input type="range" id="minWidth" min="10" max="200" value="50">
+        </label>
+        <label>Min Height: <span id="minHeightValue">30</span>
+            <input type="range" id="minHeight" min="10" max="200" value="30">
+        </label>
+        <label>Min Aspect Ratio: <span id="minAspectRatioValue">1.2</span>
+            <input type="range" id="minAspectRatio" min="0.5" max="5" step="0.1" value="1.2">
+        </label>
+        <label>Max Aspect Ratio: <span id="maxAspectRatioValue">3</span>
+            <input type="range" id="maxAspectRatio" min="1" max="10" step="0.1" value="3">
+        </label>
+        <label>
+            <input type="checkbox" id="useROI" checked> Use ROI (Lower Half)
+        </label>
+        <button onclick="copyConfig()">Copy Config</button>
+        <div id="config-output"></div>
+    </div>
+    <div id="container">
+        <img id="image" src="" alt="Uploaded Image">
+    </div>
+    <div id="output"></div>
+
+    <script type="text/javascript">
+        let containers = [];
+        let currentImage = null;
+        let config = {
+            cannyLow: 30,
+            cannyHigh: 100,
+            minWidth: 50,
+            minHeight: 30,
+            minAspectRatio: 1.2,
+            maxAspectRatio: 3,
+            useROI: true
+        };
+
+        function onOpenCvReady() {
+            console.log('OpenCV.js is ready');
+            if (typeof cv === 'undefined') {
+                console.error('OpenCV.js failed to load');
+                document.getElementById('output').innerText = 'Error: OpenCV.js not loaded';
+                return;
+            }
+            document.getElementById('imageInput').addEventListener('change', handleImageUpload);
+
+            // Add event listeners for config changes
+            ['cannyLow', 'cannyHigh', 'minWidth', 'minHeight', 'minAspectRatio', 'maxAspectRatio'].forEach(id => {
+                document.getElementById(id).addEventListener('input', (e) => {
+                    config[id] = parseFloat(e.target.value);
+                    document.getElementById(`${id}Value`).textContent = e.target.value;
+                    updateConfigOutput();
+                    if (currentImage) processImage(currentImage);
+                });
+            });
+            document.getElementById('useROI').addEventListener('change', (e) => {
+                config.useROI = e.target.checked;
+                updateConfigOutput();
+                if (currentImage) processImage(currentImage);
+            });
+        }
+
+        function updateConfigOutput() {
+            const configOutput = document.getElementById('config-output');
+            configOutput.textContent = JSON.stringify(config, null, 2);
+        }
+
+        function copyConfig() {
+            const configText = JSON.stringify(config, null, 2);
+            navigator.clipboard.writeText(configText).then(() => {
+                alert('Configuration copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy configuration');
+            });
+        }
+
+        function handleImageUpload(event) {
+            console.log('File selected:', event.target.files[0]);
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const imgElement = document.getElementById('image');
+            imgElement.src = URL.createObjectURL(file);
+            imgElement.onload = () => {
+                console.log('Image loaded: ', imgElement.naturalWidth, 'x', imgElement.naturalHeight);
+                currentImage = imgElement;
+                processImage(imgElement);
+            };
+        }
+
+        function processImage(imgElement) {
+            console.log('Processing image with config:', config);
+            const container = document.getElementById('container');
+            container.style.width = imgElement.width + 'px';
+            container.style.height = imgElement.height + 'px';
+
+            // Clear previous divs
+            const existingDivs = container.getElementsByClassName('container-div');
+            while (existingDivs.length > 0) existingDivs[0].remove();
+
+            // Temporary canvas for OpenCV
+            const canvas = document.createElement('canvas');
+            canvas.width = imgElement.naturalWidth;
+            canvas.height = imgElement.naturalHeight;
+            if (config.useROI) {
+                canvas.height = canvas.height / 2; // Focus on lower half
+            }
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(
+                imgElement, 
+                0, 
+                config.useROI ? imgElement.naturalHeight / 2 : 0, 
+                imgElement.naturalWidth, 
+                config.useROI ? imgElement.naturalHeight / 2 : imgElement.naturalHeight,
+                0, 0, canvas.width, canvas.height
+            );
+
+            let src = cv.imread(canvas);
+            let gray = new cv.Mat();
+            let edges = new cv.Mat();
+
+            // Enhance contrast
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+            let equalized = new cv.Mat();
+            cv.equalizeHist(gray, equalized);
+
+            // Apply Canny edge detection with user-configured thresholds
+            cv.Canny(equalized, edges, config.cannyLow, config.cannyHigh);
+
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+            containers = [];
+            console.log('Number of contours found:', contours.size());
+            for (let i = 0; i < contours.size(); i++) {
+                let contour = contours.get(i);
+                let rect = cv.boundingRect(contour);
+                const scaleX = imgElement.width / imgElement.naturalWidth;
+                const scaleY = imgElement.height / imgElement.naturalHeight;
+                rect.x = rect.x * scaleX;
+                rect.y = (rect.y * scaleY) + (config.useROI ? imgElement.height / 2 : 0);
+                rect.width = rect.width * scaleX;
+                rect.height = rect.height * scaleY;
+
+                const aspectRatio = rect.width / rect.height;
+                if (
+                    rect.width > config.minWidth && 
+                    rect.height > config.minHeight && 
+                    aspectRatio >= config.minAspectRatio && 
+                    aspectRatio <= config.maxAspectRatio
+                ) {
+                    containers.push(rect);
+                    console.log(`Detected rect at (${rect.x.toFixed(2)}, ${rect.y.toFixed(2)}), w=${rect.width.toFixed(2)}, h=${rect.height.toFixed(2)}, ratio=${aspectRatio.toFixed(2)}`);
+
+                    const div = document.createElement('div');
+                    div.className = 'container-div';
+                    div.style.left = rect.x + 'px';
+                    div.style.top = rect.y + 'px';
+                    div.style.width = rect.width + 'px';
+                    div.style.height = rect.height + 'px';
+                    div.addEventListener('click', () => {
+                        document.getElementById('output').innerText = `Selected container at (${Math.round(rect.x)}, ${Math.round(rect.y)})`;
+                        console.log(`Selected: x=${rect.x}, y=${rect.y}, w=${rect.width}, h=${rect.height}`);
+                    });
+                    container.appendChild(div);
+                }
+            }
+
+            document.getElementById('output').innerText = `Found ${containers.length} containers`;
+            src.delete(); gray.delete(); edges.delete(); equalized.delete(); contours.delete(); hierarchy.delete();
+        }
+    </script>
+
+    <script src="https://docs.opencv.org/4.5.5/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+</body>
+</html>
