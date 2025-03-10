@@ -9,6 +9,7 @@
         canvas { border: 1px solid black; max-width: 100%; }
         #output { margin-top: 10px; }
     </style>
+    <!-- Load Eruda for mobile console -->
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
 </head>
@@ -18,14 +19,18 @@
     <canvas id="canvas"></canvas>
     <div id="output"></div>
 
-    <script src="https://docs.opencv.org/4.5.5/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
-
+    <!-- Main script with onOpenCvReady defined first -->
     <script type="text/javascript">
         let containers = [];
 
         function onOpenCvReady() {
             console.log('OpenCV.js is ready');
-            alert('OpenCV.js is ready');
+            alert('OpenCV.js is ready'); // Debug alert
+            if (typeof cv === 'undefined') {
+                console.error('OpenCV.js failed to load');
+                document.getElementById('output').innerText = 'Error: OpenCV.js not loaded';
+                return;
+            }
             document.getElementById('imageInput').addEventListener('change', handleImageUpload);
         }
 
@@ -88,4 +93,24 @@
             let canvas = document.getElementById('canvas');
             let rect = canvas.getBoundingClientRect();
             let x = event.touches[0].clientX - rect.left;
-            let y = event.touches[0].clientY -
+            let y = event.touches[0].clientY - rect.top;
+
+            let selected = containers.find(c => 
+                x >= c.x && x <= c.x + c.width && 
+                y >= c.y && y <= c.y + c.height
+            );
+
+            let output = document.getElementById('output');
+            if (selected) {
+                output.innerText = `Selected container at (${Math.round(selected.x)}, ${Math.round(selected.y)})`;
+                console.log(`Selected: x=${selected.x}, y=${selected.y}, w=${selected.width}, h=${selected.height}`);
+            } else {
+                output.innerText = 'No container selected';
+            }
+        }
+    </script>
+
+    <!-- Load OpenCV.js after the main script -->
+    <script src="https://docs.opencv.org/4.5.5/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+</body>
+</html>
