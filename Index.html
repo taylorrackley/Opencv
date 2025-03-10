@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Container Detection Demo</title>
+    <title>Cabinet Door Detection</title>
     <style>
         body { 
             display: flex; 
@@ -16,32 +16,45 @@
         #container { 
             position: relative; 
             display: inline-block; 
+            margin-top: 20px;
         }
         #image { 
             max-width: 100%; 
             display: block; 
         }
-        .container-div { 
+        .door-div { 
             position: absolute; 
-            background-color: rgba(255, 0, 0, 0.5); 
-            border: 2px solid black; 
+            background-color: rgba(0, 255, 0, 0.3); 
+            border: 2px solid green; 
             box-sizing: border-box; 
         }
+        .drawer-div {
+            position: absolute;
+            background-color: rgba(255, 165, 0, 0.3);
+            border: 2px solid orange;
+            box-sizing: border-box;
+        }
         #output { 
-            margin-top: 10px; 
-            font-size: 16px; 
+            margin-top: 15px; 
+            font-size: 18px; 
+            font-weight: bold;
         }
         #config { 
-            margin: 10px 0; 
+            margin: 15px 0; 
             width: 100%; 
-            max-width: 400px; 
-            padding: 10px; 
+            max-width: 500px; 
+            padding: 15px; 
             border: 1px solid #ccc; 
-            border-radius: 5px; 
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        #config h3 {
+            margin-top: 0;
+            color: #333;
         }
         #config label { 
             display: block; 
-            margin: 5px 0; 
+            margin: 8px 0; 
         }
         #config input[type="range"] { 
             width: 100%; 
@@ -49,65 +62,140 @@
         #config input[type="checkbox"] { 
             margin-right: 5px; 
         }
-        #config button { 
-            margin-top: 10px; 
-            padding: 5px 10px; 
+        .config-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
         }
-        #config-output { 
-            margin-top: 10px; 
-            font-size: 14px; 
-            word-wrap: break-word; 
+        .config-column {
+            flex: 1;
+        }
+        #actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #reset {
+            background-color: #f44336;
+        }
+        #reset:hover {
+            background-color: #d32f2f;
+        }
+        .detection-summary {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e8f5e9;
+            border-radius: 5px;
+            font-size: 14px;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
 </head>
 <body>
-    <h2>Upload an Image</h2>
+    <h1>Cabinet Door Detection</h1>
     <input type="file" id="imageInput" accept="image/*">
+    
     <div id="config">
-        <h3>Configuration</h3>
-        <label>Canny Low Threshold: <span id="cannyLowValue">30</span>
-            <input type="range" id="cannyLow" min="10" max="200" value="30">
-        </label>
-        <label>Canny High Threshold: <span id="cannyHighValue">100</span>
-            <input type="range" id="cannyHigh" min="50" max="300" value="100">
-        </label>
-        <label>Min Width: <span id="minWidthValue">50</span>
-            <input type="range" id="minWidth" min="10" max="200" value="50">
-        </label>
-        <label>Min Height: <span id="minHeightValue">30</span>
-            <input type="range" id="minHeight" min="10" max="200" value="30">
-        </label>
-        <label>Min Aspect Ratio: <span id="minAspectRatioValue">1.2</span>
-            <input type="range" id="minAspectRatio" min="0.5" max="5" step="0.1" value="1.2">
-        </label>
-        <label>Max Aspect Ratio: <span id="maxAspectRatioValue">3</span>
-            <input type="range" id="maxAspectRatio" min="1" max="10" step="0.1" value="3">
-        </label>
-        <label>
-            <input type="checkbox" id="useROI" checked> Use ROI (Lower Half)
-        </label>
-        <button id="recalculate">Recalculate</button>
-        <div id="config-output"></div>
+        <h3>Detection Parameters</h3>
+        <div class="config-row">
+            <div class="config-column">
+                <label>Blur Size: <span id="blurSizeValue">5</span>
+                    <input type="range" id="blurSize" min="1" max="21" step="2" value="5">
+                </label>
+                <label>Canny Low: <span id="cannyLowValue">20</span>
+                    <input type="range" id="cannyLow" min="10" max="200" value="20">
+                </label>
+                <label>Canny High: <span id="cannyHighValue">50</span>
+                    <input type="range" id="cannyHigh" min="30" max="300" value="50">
+                </label>
+                <label>
+                    <input type="checkbox" id="useAdaptiveThreshold" checked> Use Adaptive Threshold
+                </label>
+            </div>
+            <div class="config-column">
+                <label>Min Door Width: <span id="minDoorWidthValue">100</span>
+                    <input type="range" id="minDoorWidth" min="50" max="300" value="100">
+                </label>
+                <label>Min Door Height: <span id="minDoorHeightValue">150</span>
+                    <input type="range" id="minDoorHeight" min="50" max="400" value="150">
+                </label>
+                <label>Max Door Width: <span id="maxDoorWidthValue">400</span>
+                    <input type="range" id="maxDoorWidth" min="100" max="800" value="400">
+                </label>
+                <label>Max Door Height: <span id="maxDoorHeightValue">600</span>
+                    <input type="range" id="maxDoorHeight" min="100" max="800" value="600">
+                </label>
+            </div>
+        </div>
+
+        <div class="config-row">
+            <div class="config-column">
+                <label>Min Drawer Height: <span id="minDrawerHeightValue">30</span>
+                    <input type="range" id="minDrawerHeight" min="10" max="150" value="30">
+                </label>
+                <label>Max Drawer Height: <span id="maxDrawerHeightValue">100</span>
+                    <input type="range" id="maxDrawerHeight" min="50" max="200" value="100">
+                </label>
+            </div>
+            <div class="config-column">
+                <label>Door Area Ratio: <span id="doorAreaRatioValue">0.7</span>
+                    <input type="range" id="doorAreaRatio" min="0.1" max="1" step="0.05" value="0.7">
+                </label>
+                <label>
+                    <input type="checkbox" id="filterNoise" checked> Filter Noise
+                </label>
+                <label>
+                    <input type="checkbox" id="showPreprocessed"> Show Preprocessed Image
+                </label>
+            </div>
+        </div>
+
+        <div id="actions">
+            <button id="recalculate">Recalculate</button>
+            <button id="reset">Reset Parameters</button>
+        </div>
     </div>
+
     <div id="container">
         <img id="image" src="" alt="Uploaded Image">
+        <canvas id="preprocessedCanvas" style="display: none;"></canvas>
     </div>
+    
     <div id="output"></div>
+    <div class="detection-summary" id="detectionSummary"></div>
 
     <script type="text/javascript">
-        let containers = [];
+        let doorsDetected = [];
+        let drawersDetected = [];
         let currentImage = null;
         let config = {
-            cannyLow: 30,
-            cannyHigh: 100,
-            minWidth: 50,
-            minHeight: 30,
-            minAspectRatio: 1.2,
-            maxAspectRatio: 3,
-            useROI: true
+            blurSize: 5,
+            cannyLow: 20,
+            cannyHigh: 50,
+            useAdaptiveThreshold: true,
+            minDoorWidth: 100,
+            minDoorHeight: 150,
+            maxDoorWidth: 400, 
+            maxDoorHeight: 600,
+            minDrawerHeight: 30,
+            maxDrawerHeight: 100,
+            doorAreaRatio: 0.7,
+            filterNoise: true,
+            showPreprocessed: false
         };
+
+        const defaultConfig = {...config};
 
         function onOpenCvReady() {
             console.log('OpenCV.js is ready');
@@ -116,30 +204,57 @@
                 document.getElementById('output').innerText = 'Error: OpenCV.js not loaded';
                 return;
             }
+            
             document.getElementById('imageInput').addEventListener('change', handleImageUpload);
 
-            // Event listeners for config changes (only update display)
-            ['cannyLow', 'cannyHigh', 'minWidth', 'minHeight', 'minAspectRatio', 'maxAspectRatio'].forEach(id => {
-                document.getElementById(id).addEventListener('input', (e) => {
-                    config[id] = parseFloat(e.target.value);
-                    document.getElementById(`${id}Value`).textContent = e.target.value;
-                    updateConfigOutput();
-                });
-            });
-            document.getElementById('useROI').addEventListener('change', (e) => {
-                config.useROI = e.target.checked;
-                updateConfigOutput();
+            // Set up event listeners for all config inputs
+            Object.keys(config).forEach(key => {
+                const element = document.getElementById(key);
+                if (element) {
+                    if (element.type === 'checkbox') {
+                        element.addEventListener('change', (e) => {
+                            config[key] = e.target.checked;
+                        });
+                    } else if (element.type === 'range') {
+                        element.addEventListener('input', (e) => {
+                            config[key] = parseFloat(e.target.value);
+                            document.getElementById(`${key}Value`).textContent = e.target.value;
+                        });
+                    }
+                }
             });
 
             // Recalculate button
             document.getElementById('recalculate').addEventListener('click', () => {
                 if (currentImage) processImage(currentImage);
             });
-        }
 
-        function updateConfigOutput() {
-            const configOutput = document.getElementById('config-output');
-            configOutput.textContent = JSON.stringify(config, null, 2);
+            // Reset button
+            document.getElementById('reset').addEventListener('click', () => {
+                // Reset to default values
+                Object.keys(defaultConfig).forEach(key => {
+                    config[key] = defaultConfig[key];
+                    const element = document.getElementById(key);
+                    if (element) {
+                        if (element.type === 'checkbox') {
+                            element.checked = defaultConfig[key];
+                        } else if (element.type === 'range') {
+                            element.value = defaultConfig[key];
+                            document.getElementById(`${key}Value`).textContent = defaultConfig[key];
+                        }
+                    }
+                });
+                if (currentImage) processImage(currentImage);
+            });
+
+            // Show preprocessed image toggle
+            document.getElementById('showPreprocessed').addEventListener('change', (e) => {
+                config.showPreprocessed = e.target.checked;
+                document.getElementById('preprocessedCanvas').style.display = 
+                    config.showPreprocessed ? 'block' : 'none';
+                document.getElementById('image').style.display = 
+                    config.showPreprocessed ? 'none' : 'block';
+            });
         }
 
         function handleImageUpload(event) {
@@ -148,9 +263,10 @@
 
             const imgElement = document.getElementById('image');
             imgElement.src = URL.createObjectURL(file);
+            
             imgElement.onload = () => {
                 currentImage = imgElement;
-                processImage(imgElement); // Initial processing with default config
+                processImage(imgElement);
             };
         }
 
@@ -160,73 +276,172 @@
             container.style.height = imgElement.height + 'px';
 
             // Clear previous divs
-            const existingDivs = container.getElementsByClassName('container-div');
-            while (existingDivs.length > 0) existingDivs[0].remove();
+            Array.from(container.getElementsByClassName('door-div'))
+                .concat(Array.from(container.getElementsByClassName('drawer-div')))
+                .forEach(el => el.remove());
 
-            // Temporary canvas for OpenCV
-            const canvas = document.createElement('canvas');
-            canvas.width = imgElement.naturalWidth;
-            canvas.height = imgElement.naturalHeight;
-            if (config.useROI) {
-                canvas.height = canvas.height / 2; // Focus on lower half
-            }
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(
-                imgElement, 
-                0, 
-                config.useROI ? imgElement.naturalHeight / 2 : 0, 
-                imgElement.naturalWidth, 
-                config.useROI ? imgElement.naturalHeight / 2 : imgElement.naturalHeight,
-                0, 0, canvas.width, canvas.height
-            );
-
-            let src = cv.imread(canvas);
+            // Create src Mat from image
+            let src = cv.imread(imgElement);
             let gray = new cv.Mat();
-            let edges = new cv.Mat();
-
-            // Enhance contrast
             cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-            let equalized = new cv.Mat();
-            cv.equalizeHist(gray, equalized);
-
-            // Apply Canny edge detection with user-configured thresholds
-            cv.Canny(equalized, edges, config.cannyLow, config.cannyHigh);
-
+            
+            // Apply preprocessing
+            let processed = preprocessImage(gray);
+            
+            // Display preprocessed image if needed
+            if (config.showPreprocessed) {
+                const canvas = document.getElementById('preprocessedCanvas');
+                canvas.width = imgElement.width;
+                canvas.height = imgElement.height;
+                cv.imshow(canvas, processed);
+            }
+            
+            // Find contours
             let contours = new cv.MatVector();
             let hierarchy = new cv.Mat();
-            cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-            containers = [];
+            cv.findContours(processed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+            
+            // Process contours to find doors and drawers
+            doorsDetected = [];
+            drawersDetected = [];
+            
             for (let i = 0; i < contours.size(); i++) {
                 let contour = contours.get(i);
+                
+                // Filter out small contours as noise
+                if (config.filterNoise && cv.contourArea(contour) < 500) continue;
+                
                 let rect = cv.boundingRect(contour);
-                const scaleX = imgElement.width / imgElement.naturalWidth;
-                const scaleY = imgElement.height / imgElement.naturalHeight;
-                rect.x = rect.x * scaleX;
-                rect.y = (rect.y * scaleY) + (config.useROI ? imgElement.height / 2 : 0);
-                rect.width = rect.width * scaleX;
-                rect.height = rect.height * scaleY;
-
-                const aspectRatio = rect.width / rect.height;
-                if (
-                    rect.width > config.minWidth && 
-                    rect.height > config.minHeight && 
-                    aspectRatio >= config.minAspectRatio && 
-                    aspectRatio <= config.maxAspectRatio
-                ) {
-                    containers.push(rect);
-                    const div = document.createElement('div');
-                    div.className = 'container-div';
-                    div.style.left = rect.x + 'px';
-                    div.style.top = rect.y + 'px';
-                    div.style.width = rect.width + 'px';
-                    div.style.height = rect.height + 'px';
-                    container.appendChild(div);
+                
+                // Scale coordinates to image dimensions
+                const scaleX = imgElement.width / src.cols;
+                const scaleY = imgElement.height / src.rows;
+                
+                const scaledRect = {
+                    x: rect.x * scaleX,
+                    y: rect.y * scaleY,
+                    width: rect.width * scaleX,
+                    height: rect.height * scaleY
+                };
+                
+                // Determine if rectangle is a door or drawer
+                if (isDoor(rect)) {
+                    doorsDetected.push(scaledRect);
+                    createDetectionDiv(container, scaledRect, 'door-div');
+                } else if (isDrawer(rect)) {
+                    drawersDetected.push(scaledRect);
+                    createDetectionDiv(container, scaledRect, 'drawer-div');
                 }
             }
 
-            document.getElementById('output').innerText = `Found ${containers.length} containers`;
-            src.delete(); gray.delete(); edges.delete(); equalized.delete(); contours.delete(); hierarchy.delete();
+            // Update results display
+            updateResults();
+            
+            // Cleanup
+            src.delete();
+            gray.delete();
+            processed.delete();
+            contours.delete();
+            hierarchy.delete();
+        }
+        
+        function preprocessImage(gray) {
+            // Create copy to work with
+            let processed = gray.clone();
+            
+            // Apply Gaussian blur to reduce noise
+            let blurred = new cv.Mat();
+            let ksize = new cv.Size(config.blurSize, config.blurSize);
+            cv.GaussianBlur(processed, blurred, ksize, 0);
+            
+            // Apply adaptive threshold if enabled
+            if (config.useAdaptiveThreshold) {
+                let binary = new cv.Mat();
+                cv.adaptiveThreshold(
+                    blurred, 
+                    binary, 
+                    255, 
+                    cv.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                    cv.THRESH_BINARY_INV, 
+                    11, 
+                    2
+                );
+                blurred.delete();
+                blurred = binary;
+            }
+            
+            // Apply Canny edge detection
+            let edges = new cv.Mat();
+            cv.Canny(blurred, edges, config.cannyLow, config.cannyHigh);
+            
+            // Dilate the edges to connect them
+            let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
+            let dilated = new cv.Mat();
+            cv.dilate(edges, dilated, kernel, new cv.Point(-1, -1), 2);
+            
+            // Cleanup
+            processed.delete();
+            blurred.delete();
+            edges.delete();
+            kernel.delete();
+            
+            return dilated;
+        }
+        
+        function isDoor(rect) {
+            const aspectRatio = rect.width / rect.height;
+            
+            // Check if it matches door criteria
+            return (
+                rect.width >= config.minDoorWidth && 
+                rect.width <= config.maxDoorWidth &&
+                rect.height >= config.minDoorHeight && 
+                rect.height <= config.maxDoorHeight &&
+                aspectRatio >= 0.3 && 
+                aspectRatio <= 0.8
+            );
+        }
+        
+        function isDrawer(rect) {
+            const aspectRatio = rect.width / rect.height;
+            
+            // Check if it matches drawer criteria
+            return (
+                rect.height >= config.minDrawerHeight && 
+                rect.height <= config.maxDrawerHeight &&
+                aspectRatio >= 1.5 && 
+                aspectRatio <= 5
+            );
+        }
+        
+        function createDetectionDiv(container, rect, className) {
+            const div = document.createElement('div');
+            div.className = className;
+            div.style.left = rect.x + 'px';
+            div.style.top = rect.y + 'px';
+            div.style.width = rect.width + 'px';
+            div.style.height = rect.height + 'px';
+            container.appendChild(div);
+        }
+        
+        function updateResults() {
+            const output = document.getElementById('output');
+            output.innerText = `Detected: ${doorsDetected.length} doors and ${drawersDetected.length} drawers`;
+            
+            // Update detection summary
+            const summary = document.getElementById('detectionSummary');
+            summary.innerHTML = `
+                <strong>Detection Results:</strong><br>
+                - Doors: ${doorsDetected.length} (green)<br>
+                - Drawers: ${drawersDetected.length} (orange)<br>
+                <br>
+                <strong>Tip:</strong> If detection is not accurate, try:
+                <ul>
+                    <li>Adjusting Canny thresholds for better edge detection</li>
+                    <li>Increasing blur size if there's noise in the image</li>
+                    <li>Adjusting door/drawer size parameters</li>
+                </ul>
+            `;
         }
     </script>
 
