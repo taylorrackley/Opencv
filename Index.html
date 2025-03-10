@@ -50,10 +50,12 @@
             let canvas = document.getElementById('canvas');
             let ctx = canvas.getContext('2d');
 
+            // Set canvas size and draw original image
             canvas.width = imgElement.width;
             canvas.height = imgElement.height;
             ctx.drawImage(imgElement, 0, 0);
 
+            // Process with OpenCV
             let src = cv.imread(canvas);
             let gray = new cv.Mat();
             let edges = new cv.Mat();
@@ -66,7 +68,7 @@
             cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
             containers = [];
-            console.log('Drawing containers...');
+            console.log('Drawing containers with OpenCV...');
             for (let i = 0; i < contours.size(); i++) {
                 let contour = contours.get(i);
                 let rect = cv.boundingRect(contour);
@@ -76,22 +78,25 @@
                     cv.rectangle(src, 
                         new cv.Point(rect.x, rect.y), 
                         new cv.Point(rect.x + rect.width, rect.y + rect.height), 
-                        [0, 255, 0, 255], 2); // Green rectangle
+                        [0, 255, 0, 255], 2); // Green rectangles
                 }
             }
             console.log('Detected containers:', containers);
 
-            // Display the processed image with OpenCV
+            // Force canvas refresh and display OpenCV result
             console.log('Displaying image with OpenCV...');
+            canvas.width = canvas.width; // Clear canvas
             cv.imshow(canvas, src);
 
-            // Fallback: Draw rectangles using canvas 2D context
-            console.log('Drawing fallback rectangles with canvas 2D...');
-            ctx.strokeStyle = 'red'; // Red for fallback to distinguish from OpenCV green
-            ctx.lineWidth = 2;
-            containers.forEach(rect => {
-                ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
-            });
+            // Fallback drawing with canvas 2D (after a slight delay)
+            setTimeout(() => {
+                console.log('Drawing fallback rectangles with canvas 2D...');
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 2;
+                containers.forEach(rect => {
+                    ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+                });
+            }, 100); // 100ms delay to ensure OpenCV renders first
 
             canvas.addEventListener('touchstart', handleTap);
 
