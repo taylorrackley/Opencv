@@ -20,6 +20,7 @@
 
     <script type="text/javascript">
         let containers = [];
+        let scaleFactor = 1;
 
         function onOpenCvReady() {
             console.log('OpenCV.js is ready');
@@ -50,57 +51,61 @@
             let canvas = document.getElementById('canvas');
             let ctx = canvas.getContext('2d');
 
-            // Set canvas size and draw original image
-            canvas.width = imgElement.width;
-            canvas.height = imgElement.height;
-            ctx.drawImage(imgElement, 0, 0);
+            // Scale down the image for better performance
+            const maxWidth = 800; // Adjust as needed
+            scaleFactor = maxWidth / imgElement.width;
+            canvas.width = maxWidth;
+            canvas.height = imgElement.height * scaleFactor;
+            ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
 
             // Process with OpenCV
             let src = cv.imread(canvas);
             let gray = new cv.Mat();
             let edges = new cv.Mat();
 
+            // Increase contrast to better detect drawers
+            let equalized = new cv.Mat();
             cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-            cv.Canny(gray, edges, 100, 200);
+            cv.equalizeHist(gray, equalized);
+            cv.Canny(equalized, edges, 50, 150); // Adjusted thresholds
 
             let contours = new cv.MatVector();
             let hierarchy = new cv.Mat();
             cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
             containers = [];
-            console.log('Drawing containers with OpenCV...');
+            console.log('Detecting containers...');
             for (let i = 0; i < contours.size(); i++) {
                 let contour = contours.get(i);
                 let rect = cv.boundingRect(contour);
-                if (rect.width > 50 && rect.height > 50) {
+                // Scale coordinates to match canvas
+                rect.x = rect.x * scaleFactor;
+                rect.y = rect.y * scaleFactor;
+                rect.width = rect.width * scaleFactor;
+                rect.height = rect.height * scaleFactor;
+                // Filter by size and aspect ratio (drawers are typically wider than tall)
+                if (rect.width > 30 && rect.height > 20 && rect.width > rect.height) {
                     containers.push(rect);
-                    console.log(`Drawing rect at (${rect.x}, ${rect.y}), w=${rect.width}, h=${rect.height}`);
-                    cv.rectangle(src, 
-                        new cv.Point(rect.x, rect.y), 
-                        new cv.Point(rect.x + rect.width, rect.y + rect.height), 
-                        [0, 255, 0, 255], 2); // Green rectangles
+                    console.log(`Detected rect at (${rect.x}, ${rect.y}), w=${rect.width}, h=${rect.height}`);
                 }
             }
-            console.log('Detected containers:', containers);
 
-            // Force canvas refresh and display OpenCV result
-            console.log('Displaying image with OpenCV...');
-            canvas.width = canvas.width; // Clear canvas
-            cv.imshow(canvas, src);
+            // Draw using canvas 2D only (bypass cv.imshow issues)
+            console.log('Drawing rectangles with canvas 2D...');
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            containers.forEach(rect => {
+                ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+            });
 
-            // Fallback drawing with canvas 2D (after a slight delay)
-            setTimeout(() => {
-                console.log('Drawing fallback rectangles with canvas 2D...');
-                ctx.strokeStyle = 'red';
-                ctx.lineWidth = 2;
-                containers.forEach(rect => {
-                    ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
-                });
-            }, 100); // 100ms delay to ensure OpenCV renders first
+            // Test drawing a single rectangle to confirm rendering
+            console.log('Drawing test rectangle...');
+            ctx.strokeStyle = 'blue';
+            ctx.strokeRect(10, 10, 50, 50); // Small blue square in top-left corner
 
             canvas.addEventListener('touchstart', handleTap);
 
-            src.delete(); gray.delete(); edges.delete(); contours.delete(); hierarchy.delete();
+            src.delete(); gray.delete(); edges.delete(); equalized.delete(); contours.delete(); hierarchy.delete();
         }
 
         function handleTap(event) {
