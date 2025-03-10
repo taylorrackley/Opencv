@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Container Detection Demo</title>
+    <style>
+        body { display: flex; flex-direction: column; align-items: center; font-family: Arial, sans-serif; }
+        canvas { border: 1px solid black; max-width: 100%; }
+        #output { margin-top: 10px; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
+</head>
+<body>
+    <h2>Upload an Image</h2>
+    <input type="file" id="imageInput" accept="image/*">
+    <canvas id="canvas"></canvas>
+    <div id="output"></div>
+
+    <script src="https://docs.opencv.org/4.5.5/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        let containers = [];
+
+        function onOpenCvReady() {
+            console.log('OpenCV.js is ready');
+            alert('OpenCV.js is ready');
+            document.getElementById('imageInput').addEventListener('change', handleImageUpload);
+        }
+
+        function handleImageUpload(event) {
+            console.log('File selected:', event.target.files[0]);
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const imgElement = new Image();
+            imgElement.onload = () => {
+                console.log('Image loaded:', imgElement.width, imgElement.height);
+                processImage(imgElement);
+            };
+            imgElement.src = URL.createObjectURL(file);
+        }
+
+        function processImage(imgElement) {
+            console.log('Processing image...');
+            let canvas = document.getElementById('canvas');
+            let ctx = canvas.getContext('2d');
+
+            canvas.width = imgElement.width;
+            canvas.height = imgElement.height;
+            ctx.drawImage(imgElement, 0, 0);
+
+            let src = cv.imread(canvas);
+            let gray = new cv.Mat();
+            let edges = new cv.Mat();
+
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+            cv.Canny(gray, edges, 100, 200);
+
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+            containers = [];
+            for (let i = 0; i < contours.size(); i++) {
+                let contour = contours.get(i);
+                let rect = cv.boundingRect(contour);
+                if (rect.width > 50 && rect.height > 50) {
+                    containers.push(rect);
+                    cv.rectangle(src, 
+                        new cv.Point(rect.x, rect.y), 
+                        new cv.Point(rect.x + rect.width, rect.y + rect.height), 
+                        [0, 255, 0, 255], 2);
+                }
+            }
+            console.log('Detected containers:', containers);
+
+            cv.imshow(canvas, src);
+
+            canvas.addEventListener('touchstart', handleTap);
+
+            src.delete(); gray.delete(); edges.delete(); contours.delete(); hierarchy.delete();
+        }
+
+        function handleTap(event) {
+            event.preventDefault();
+            let canvas = document.getElementById('canvas');
+            let rect = canvas.getBoundingClientRect();
+            let x = event.touches[0].clientX - rect.left;
+            let y = event.touches[0].clientY -
