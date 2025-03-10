@@ -9,7 +9,6 @@
         canvas { border: 1px solid black; max-width: 100%; }
         #output { margin-top: 10px; }
     </style>
-    <!-- Load Eruda for mobile console -->
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
 </head>
@@ -19,13 +18,12 @@
     <canvas id="canvas"></canvas>
     <div id="output"></div>
 
-    <!-- Main script with onOpenCvReady defined first -->
     <script type="text/javascript">
         let containers = [];
 
         function onOpenCvReady() {
             console.log('OpenCV.js is ready');
-            alert('OpenCV.js is ready'); // Debug alert
+            alert('OpenCV.js is ready');
             if (typeof cv === 'undefined') {
                 console.error('OpenCV.js failed to load');
                 document.getElementById('output').innerText = 'Error: OpenCV.js not loaded';
@@ -68,20 +66,32 @@
             cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
             containers = [];
+            console.log('Drawing containers...');
             for (let i = 0; i < contours.size(); i++) {
                 let contour = contours.get(i);
                 let rect = cv.boundingRect(contour);
                 if (rect.width > 50 && rect.height > 50) {
                     containers.push(rect);
+                    console.log(`Drawing rect at (${rect.x}, ${rect.y}), w=${rect.width}, h=${rect.height}`);
                     cv.rectangle(src, 
                         new cv.Point(rect.x, rect.y), 
                         new cv.Point(rect.x + rect.width, rect.y + rect.height), 
-                        [0, 255, 0, 255], 2);
+                        [0, 255, 0, 255], 2); // Green rectangle
                 }
             }
             console.log('Detected containers:', containers);
 
+            // Display the processed image with OpenCV
+            console.log('Displaying image with OpenCV...');
             cv.imshow(canvas, src);
+
+            // Fallback: Draw rectangles using canvas 2D context
+            console.log('Drawing fallback rectangles with canvas 2D...');
+            ctx.strokeStyle = 'red'; // Red for fallback to distinguish from OpenCV green
+            ctx.lineWidth = 2;
+            containers.forEach(rect => {
+                ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+            });
 
             canvas.addEventListener('touchstart', handleTap);
 
@@ -110,7 +120,6 @@
         }
     </script>
 
-    <!-- Load OpenCV.js after the main script -->
     <script src="https://docs.opencv.org/4.5.5/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
 </body>
 </html>
