@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cabinet Door Detection</title>
+    <title>Advanced Cabinet Door Detection</title>
     <style>
         body { 
             display: flex; 
@@ -34,6 +34,12 @@
             border: 2px solid orange;
             box-sizing: border-box;
         }
+        .line {
+            position: absolute;
+            background-color: rgba(255, 0, 0, 0.7);
+            height: 2px;
+            transform-origin: 0 0;
+        }
         #output { 
             margin-top: 15px; 
             font-size: 18px; 
@@ -42,7 +48,7 @@
         #config { 
             margin: 15px 0; 
             width: 100%; 
-            max-width: 500px; 
+            max-width: 800px; 
             padding: 15px; 
             border: 1px solid #ccc; 
             border-radius: 8px;
@@ -100,45 +106,152 @@
             border-radius: 5px;
             font-size: 14px;
         }
+        .tabs {
+            display: flex;
+            margin-bottom: 10px;
+            width: 100%;
+            max-width: 800px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #f9f9f9;
+            font-weight: bold;
+        }
+        .view-selector {
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
-    <h1>Cabinet Door Detection</h1>
+    <h1>Advanced Cabinet Door Detection</h1>
     <input type="file" id="imageInput" accept="image/*">
+    
+    <div class="tabs">
+        <div class="tab active" data-tab="contour">Contour Detection</div>
+        <div class="tab" data-tab="hough">Hough Line Detection</div>
+        <div class="tab" data-tab="combined">Combined Approach</div>
+    </div>
     
     <div id="config">
         <h3>Detection Parameters</h3>
-        <div class="config-row">
-            <div class="config-column">
-                <label>Blur Size: <span id="blurSizeValue">5</span>
-                    <input type="range" id="blurSize" min="1" max="21" step="2" value="5">
-                </label>
-                <label>Canny Low: <span id="cannyLowValue">20</span>
-                    <input type="range" id="cannyLow" min="10" max="200" value="20">
-                </label>
-                <label>Canny High: <span id="cannyHighValue">50</span>
-                    <input type="range" id="cannyHigh" min="30" max="300" value="50">
-                </label>
-                <label>
-                    <input type="checkbox" id="useAdaptiveThreshold" checked> Use Adaptive Threshold
-                </label>
-            </div>
-            <div class="config-column">
-                <label>Min Door Width: <span id="minDoorWidthValue">100</span>
-                    <input type="range" id="minDoorWidth" min="50" max="300" value="100">
-                </label>
-                <label>Min Door Height: <span id="minDoorHeightValue">150</span>
-                    <input type="range" id="minDoorHeight" min="50" max="400" value="150">
-                </label>
-                <label>Max Door Width: <span id="maxDoorWidthValue">400</span>
-                    <input type="range" id="maxDoorWidth" min="100" max="800" value="400">
-                </label>
-                <label>Max Door Height: <span id="maxDoorHeightValue">600</span>
-                    <input type="range" id="maxDoorHeight" min="100" max="800" value="600">
-                </label>
+        
+        <!-- Contour Method Parameters -->
+        <div id="contourParams">
+            <div class="config-row">
+                <div class="config-column">
+                    <label>Blur Size: <span id="blurSizeValue">5</span>
+                        <input type="range" id="blurSize" min="1" max="21" step="2" value="5">
+                    </label>
+                    <label>Canny Low: <span id="cannyLowValue">20</span>
+                        <input type="range" id="cannyLow" min="10" max="200" value="20">
+                    </label>
+                    <label>Canny High: <span id="cannyHighValue">50</span>
+                        <input type="range" id="cannyHigh" min="30" max="300" value="50">
+                    </label>
+                    <label>
+                        <input type="checkbox" id="useAdaptiveThreshold" checked> Use Adaptive Threshold
+                    </label>
+                </div>
+                <div class="config-column">
+                    <label>Min Door Width: <span id="minDoorWidthValue">100</span>
+                        <input type="range" id="minDoorWidth" min="50" max="300" value="100">
+                    </label>
+                    <label>Min Door Height: <span id="minDoorHeightValue">150</span>
+                        <input type="range" id="minDoorHeight" min="50" max="400" value="150">
+                    </label>
+                    <label>Max Door Width: <span id="maxDoorWidthValue">400</span>
+                        <input type="range" id="maxDoorWidth" min="100" max="800" value="400">
+                    </label>
+                    <label>Max Door Height: <span id="maxDoorHeightValue">600</span>
+                        <input type="range" id="maxDoorHeight" min="100" max="800" value="600">
+                    </label>
+                </div>
             </div>
         </div>
-
+        
+        <!-- Hough Method Parameters -->
+        <div id="houghParams" style="display: none;">
+            <div class="config-row">
+                <div class="config-column">
+                    <label>Hough Threshold: <span id="houghThresholdValue">100</span>
+                        <input type="range" id="houghThreshold" min="50" max="200" value="100">
+                    </label>
+                    <label>Min Line Length: <span id="minLineLength">50</span>
+                        <input type="range" id="minLineLengthRange" min="10" max="200" value="50">
+                    </label>
+                    <label>Max Line Gap: <span id="maxLineGap">10</span>
+                        <input type="range" id="maxLineGapRange" min="1" max="50" value="10">
+                    </label>
+                </div>
+                <div class="config-column">
+                    <label>Min Line Angle: <span id="minLineAngleValue">0</span>
+                        <input type="range" id="minLineAngle" min="0" max="180" value="0">
+                    </label>
+                    <label>Max Line Angle: <span id="maxLineAngleValue">180</span>
+                        <input type="range" id="maxLineAngle" min="0" max="180" value="180">
+                    </label>
+                    <label>Group Lines Distance: <span id="groupLinesDistValue">10</span>
+                        <input type="range" id="groupLinesDist" min="1" max="50" value="10">
+                    </label>
+                </div>
+            </div>
+            <div class="config-row">
+                <div class="config-column">
+                    <label>
+                        <input type="checkbox" id="showLines" checked> Show Detected Lines
+                    </label>
+                    <label>
+                        <input type="checkbox" id="onlyVerticalHorizontal" checked> Only Vertical/Horizontal Lines
+                    </label>
+                </div>
+                <div class="config-column">
+                    <label>Door Width Tolerance: <span id="doorWidthToleranceValue">20</span>
+                        <input type="range" id="doorWidthTolerance" min="5" max="50" value="20">
+                    </label>
+                    <label>Door Height Tolerance: <span id="doorHeightToleranceValue">20</span>
+                        <input type="range" id="doorHeightTolerance" min="5" max="50" value="20">
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Combined Method Parameters (will have a subset of both) -->
+        <div id="combinedParams" style="display: none;">
+            <div class="config-row">
+                <div class="config-column">
+                    <label>Blur Size: <span id="cBlurSizeValue">5</span>
+                        <input type="range" id="cBlurSize" min="1" max="21" step="2" value="5">
+                    </label>
+                    <label>Canny Low: <span id="cCannyLowValue">20</span>
+                        <input type="range" id="cCannyLow" min="10" max="200" value="20">
+                    </label>
+                    <label>Canny High: <span id="cCannyHighValue">50</span>
+                        <input type="range" id="cCannyHigh" min="30" max="300" value="50">
+                    </label>
+                </div>
+                <div class="config-column">
+                    <label>Hough Threshold: <span id="cHoughThresholdValue">100</span>
+                        <input type="range" id="cHoughThreshold" min="50" max="200" value="100">
+                    </label>
+                    <label>Line Filter Threshold: <span id="lineFilterThresholdValue">0.7</span>
+                        <input type="range" id="lineFilterThreshold" min="0.1" max="1" step="0.05" value="0.7">
+                    </label>
+                    <label>
+                        <input type="checkbox" id="cShowLines" checked> Show Lines
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Common Parameters -->
         <div class="config-row">
             <div class="config-column">
                 <label>Min Drawer Height: <span id="minDrawerHeightValue">30</span>
@@ -155,10 +268,19 @@
                 <label>
                     <input type="checkbox" id="filterNoise" checked> Filter Noise
                 </label>
-                <label>
-                    <input type="checkbox" id="showPreprocessed"> Show Preprocessed Image
-                </label>
             </div>
+        </div>
+        
+        <div class="view-selector">
+            <label>
+                <input type="radio" name="view" value="original" checked> Original
+            </label>
+            <label>
+                <input type="radio" name="view" value="edges"> Edge Image
+            </label>
+            <label>
+                <input type="radio" name="view" value="contours"> Contours
+            </label>
         </div>
 
         <div id="actions">
@@ -169,7 +291,7 @@
 
     <div id="container">
         <img id="image" src="" alt="Uploaded Image">
-        <canvas id="preprocessedCanvas" style="display: none;"></canvas>
+        <canvas id="processedCanvas" style="display: none;"></canvas>
     </div>
     
     <div id="output"></div>
@@ -178,8 +300,13 @@
     <script type="text/javascript">
         let doorsDetected = [];
         let drawersDetected = [];
+        let lines = [];
         let currentImage = null;
-        let config = {
+        let activeTab = 'contour';
+        let currentView = 'original';
+        
+        // Config objects for different methods
+        let contourConfig = {
             blurSize: 5,
             cannyLow: 20,
             cannyHigh: 50,
@@ -188,14 +315,46 @@
             minDoorHeight: 150,
             maxDoorWidth: 400, 
             maxDoorHeight: 600,
+            filterNoise: true
+        };
+        
+        let houghConfig = {
+            blurSize: 5,
+            cannyLow: 50,
+            cannyHigh: 150,
+            houghThreshold: 100,
+            minLineLength: 50,
+            maxLineGap: 10,
+            minLineAngle: 0,
+            maxLineAngle: 180,
+            groupLinesDist: 10,
+            showLines: true,
+            onlyVerticalHorizontal: true,
+            doorWidthTolerance: 20,
+            doorHeightTolerance: 20
+        };
+        
+        let combinedConfig = {
+            blurSize: 5,
+            cannyLow: 30,
+            cannyHigh: 100,
+            houghThreshold: 100,
+            lineFilterThreshold: 0.7,
+            showLines: true
+        };
+        
+        let sharedConfig = {
             minDrawerHeight: 30,
             maxDrawerHeight: 100,
             doorAreaRatio: 0.7,
-            filterNoise: true,
-            showPreprocessed: false
+            filterNoise: true
         };
-
-        const defaultConfig = {...config};
+        
+        // Store default configs
+        const defaultContourConfig = {...contourConfig};
+        const defaultHoughConfig = {...houghConfig};
+        const defaultCombinedConfig = {...combinedConfig};
+        const defaultSharedConfig = {...sharedConfig};
 
         function onOpenCvReady() {
             console.log('OpenCV.js is ready');
@@ -206,22 +365,49 @@
             }
             
             document.getElementById('imageInput').addEventListener('change', handleImageUpload);
-
-            // Set up event listeners for all config inputs
-            Object.keys(config).forEach(key => {
-                const element = document.getElementById(key);
-                if (element) {
-                    if (element.type === 'checkbox') {
-                        element.addEventListener('change', (e) => {
-                            config[key] = e.target.checked;
-                        });
-                    } else if (element.type === 'range') {
-                        element.addEventListener('input', (e) => {
-                            config[key] = parseFloat(e.target.value);
-                            document.getElementById(`${key}Value`).textContent = e.target.value;
-                        });
-                    }
-                }
+            
+            // Set up tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    e.target.classList.add('active');
+                    activeTab = e.target.dataset.tab;
+                    
+                    // Show appropriate parameter sections
+                    document.getElementById('contourParams').style.display = activeTab === 'contour' ? 'block' : 'none';
+                    document.getElementById('houghParams').style.display = activeTab === 'hough' ? 'block' : 'none';
+                    document.getElementById('combinedParams').style.display = activeTab === 'combined' ? 'block' : 'none';
+                    
+                    if (currentImage) processImage(currentImage);
+                });
+            });
+            
+            // Setup view selector
+            document.querySelectorAll('input[name="view"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    currentView = e.target.value;
+                    updateView();
+                });
+            });
+            
+            // Set up event listeners for contour config
+            Object.keys(contourConfig).forEach(key => {
+                setupConfigListener(key, 'contourConfig');
+            });
+            
+            // Set up event listeners for hough config
+            Object.keys(houghConfig).forEach(key => {
+                setupConfigListener(key, 'houghConfig');
+            });
+            
+            // Set up event listeners for combined config
+            Object.keys(combinedConfig).forEach(key => {
+                setupConfigListener(key, 'combinedConfig');
+            });
+            
+            // Set up event listeners for shared config
+            Object.keys(sharedConfig).forEach(key => {
+                setupConfigListener(key, 'sharedConfig');
             });
 
             // Recalculate button
@@ -231,29 +417,88 @@
 
             // Reset button
             document.getElementById('reset').addEventListener('click', () => {
-                // Reset to default values
-                Object.keys(defaultConfig).forEach(key => {
-                    config[key] = defaultConfig[key];
-                    const element = document.getElementById(key);
-                    if (element) {
-                        if (element.type === 'checkbox') {
-                            element.checked = defaultConfig[key];
-                        } else if (element.type === 'range') {
-                            element.value = defaultConfig[key];
-                            document.getElementById(`${key}Value`).textContent = defaultConfig[key];
-                        }
-                    }
-                });
+                resetConfig();
                 if (currentImage) processImage(currentImage);
             });
 
-            // Show preprocessed image toggle
-            document.getElementById('showPreprocessed').addEventListener('change', (e) => {
-                config.showPreprocessed = e.target.checked;
-                document.getElementById('preprocessedCanvas').style.display = 
-                    config.showPreprocessed ? 'block' : 'none';
-                document.getElementById('image').style.display = 
-                    config.showPreprocessed ? 'none' : 'block';
+            // Special case for minLineLength and maxLineGap
+            document.getElementById('minLineLengthRange').addEventListener('input', (e) => {
+                houghConfig.minLineLength = parseInt(e.target.value);
+                document.getElementById('minLineLength').textContent = e.target.value;
+            });
+            
+            document.getElementById('maxLineGapRange').addEventListener('input', (e) => {
+                houghConfig.maxLineGap = parseInt(e.target.value);
+                document.getElementById('maxLineGap').textContent = e.target.value;
+            });
+        }
+        
+        function setupConfigListener(key, configName) {
+            const element = document.getElementById(key);
+            if (!element) {
+                // Try prefixed version for combined params
+                const prefixedElement = document.getElementById('c' + key.charAt(0).toUpperCase() + key.slice(1));
+                if (prefixedElement) {
+                    if (prefixedElement.type === 'checkbox') {
+                        prefixedElement.addEventListener('change', (e) => {
+                            window[configName][key] = e.target.checked;
+                        });
+                    } else if (prefixedElement.type === 'range') {
+                        prefixedElement.addEventListener('input', (e) => {
+                            window[configName][key] = parseFloat(e.target.value);
+                            document.getElementById(`c${key.charAt(0).toUpperCase() + key.slice(1)}Value`).textContent = e.target.value;
+                        });
+                    }
+                }
+                return;
+            }
+            
+            if (element.type === 'checkbox') {
+                element.addEventListener('change', (e) => {
+                    window[configName][key] = e.target.checked;
+                });
+            } else if (element.type === 'range') {
+                element.addEventListener('input', (e) => {
+                    window[configName][key] = parseFloat(e.target.value);
+                    const valueElement = document.getElementById(`${key}Value`);
+                    if (valueElement) valueElement.textContent = e.target.value;
+                });
+            }
+        }
+        
+        function resetConfig() {
+            // Reset to default values for active tab and shared config
+            resetConfigObject(contourConfig, defaultContourConfig, 'contourConfig');
+            resetConfigObject(houghConfig, defaultHoughConfig, 'houghConfig');
+            resetConfigObject(combinedConfig, defaultCombinedConfig, 'combinedConfig');
+            resetConfigObject(sharedConfig, defaultSharedConfig, 'sharedConfig');
+        }
+        
+        function resetConfigObject(config, defaultConfig, configName) {
+            Object.keys(defaultConfig).forEach(key => {
+                config[key] = defaultConfig[key];
+                const element = document.getElementById(key);
+                if (element) {
+                    if (element.type === 'checkbox') {
+                        element.checked = defaultConfig[key];
+                    } else if (element.type === 'range') {
+                        element.value = defaultConfig[key];
+                        const valueElement = document.getElementById(`${key}Value`);
+                        if (valueElement) valueElement.textContent = defaultConfig[key];
+                    }
+                }
+                
+                // Check for prefixed version for combined params
+                const prefixedElement = document.getElementById('c' + key.charAt(0).toUpperCase() + key.slice(1));
+                if (prefixedElement) {
+                    if (prefixedElement.type === 'checkbox') {
+                        prefixedElement.checked = defaultConfig[key];
+                    } else if (prefixedElement.type === 'range') {
+                        prefixedElement.value = defaultConfig[key];
+                        const valueElement = document.getElementById(`c${key.charAt(0).toUpperCase() + key.slice(1)}Value`);
+                        if (valueElement) valueElement.textContent = defaultConfig[key];
+                    }
+                }
             });
         }
 
@@ -275,26 +520,130 @@
             container.style.width = imgElement.width + 'px';
             container.style.height = imgElement.height + 'px';
 
-            // Clear previous divs
-            Array.from(container.getElementsByClassName('door-div'))
-                .concat(Array.from(container.getElementsByClassName('drawer-div')))
-                .forEach(el => el.remove());
-
+            // Clear previous divs and lines
+            clearDetections();
+            
             // Create src Mat from image
             let src = cv.imread(imgElement);
             let gray = new cv.Mat();
             cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
             
-            // Apply preprocessing
-            let processed = preprocessImage(gray);
-            
-            // Display preprocessed image if needed
-            if (config.showPreprocessed) {
-                const canvas = document.getElementById('preprocessedCanvas');
-                canvas.width = imgElement.width;
-                canvas.height = imgElement.height;
-                cv.imshow(canvas, processed);
+            // Process based on active tab
+            switch(activeTab) {
+                case 'contour':
+                    processContourMethod(src, gray, imgElement);
+                    break;
+                case 'hough':
+                    processHoughMethod(src, gray, imgElement);
+                    break;
+                case 'combined':
+                    processCombinedMethod(src, gray, imgElement);
+                    break;
             }
+            
+            // Update results display
+            updateResults();
+            
+            // Update view based on selection
+            updateView();
+            
+            // Cleanup
+            src.delete();
+            gray.delete();
+        }
+        
+        function clearDetections() {
+            const container = document.getElementById('container');
+            Array.from(container.getElementsByClassName('door-div'))
+                .concat(Array.from(container.getElementsByClassName('drawer-div')))
+                .concat(Array.from(container.getElementsByClassName('line')))
+                .forEach(el => el.remove());
+        }
+        
+        function updateView() {
+            const imgElement = document.getElementById('image');
+            const processedCanvas = document.getElementById('processedCanvas');
+            
+            if (currentView === 'original') {
+                imgElement.style.display = 'block';
+                processedCanvas.style.display = 'none';
+            } else {
+                imgElement.style.display = 'none';
+                processedCanvas.style.display = 'block';
+                
+                // Process the image for the selected view
+                if (currentImage) {
+                    let src = cv.imread(currentImage);
+                    let gray = new cv.Mat();
+                    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                    
+                    let config = (activeTab === 'contour') ? contourConfig :
+                                (activeTab === 'hough') ? houghConfig : combinedConfig;
+                    
+                    let processed;
+                    
+                    if (currentView === 'edges') {
+                        processed = createEdgeImage(gray, config);
+                    } else if (currentView === 'contours') {
+                        processed = createContourImage(gray, config);
+                    }
+                    
+                    cv.imshow(processedCanvas, processed);
+                    
+                    // Cleanup
+                    src.delete();
+                    gray.delete();
+                    processed.delete();
+                }
+            }
+        }
+        
+        function createEdgeImage(gray, config) {
+            // Apply blur
+            let blurred = new cv.Mat();
+            let ksize = new cv.Size(config.blurSize, config.blurSize);
+            cv.GaussianBlur(gray, blurred, ksize, 0);
+            
+            // Apply edge detection
+            let edges = new cv.Mat();
+            cv.Canny(blurred, edges, config.cannyLow, config.cannyHigh);
+            
+            // Convert to color for visualization
+            let colored = new cv.Mat();
+            cv.cvtColor(edges, colored, cv.COLOR_GRAY2RGBA);
+            
+            // Cleanup
+            blurred.delete();
+            edges.delete();
+            
+            return colored;
+        }
+        
+        function createContourImage(gray, config) {
+            // Preprocess for contours
+            let processed = preprocessImage(gray, config);
+            
+            // Find contours
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(processed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+            
+            // Draw contours on blank image
+            let dst = new cv.Mat.zeros(gray.rows, gray.cols, cv.CV_8UC4);
+            let color = new cv.Scalar(0, 255, 0, 255);
+            cv.drawContours(dst, contours, -1, color, 2);
+            
+            // Cleanup
+            processed.delete();
+            contours.delete();
+            hierarchy.delete();
+            
+            return dst;
+        }
+        
+        function processContourMethod(src, gray, imgElement) {
+            // Apply preprocessing
+            let processed = preprocessImage(gray, contourConfig);
             
             // Find contours
             let contours = new cv.MatVector();
@@ -309,7 +658,7 @@
                 let contour = contours.get(i);
                 
                 // Filter out small contours as noise
-                if (config.filterNoise && cv.contourArea(contour) < 500) continue;
+                if (sharedConfig.filterNoise && cv.contourArea(contour) < 500) continue;
                 
                 let rect = cv.boundingRect(contour);
                 
@@ -321,130 +670,80 @@
                     x: rect.x * scaleX,
                     y: rect.y * scaleY,
                     width: rect.width * scaleX,
-                    height: rect.height * scaleY
+                    height: rect.height * scaleY,
+                    area: cv.contourArea(contour)
                 };
                 
                 // Determine if rectangle is a door or drawer
-                if (isDoor(rect)) {
+                if (isDoor(rect, contourConfig)) {
                     doorsDetected.push(scaledRect);
-                    createDetectionDiv(container, scaledRect, 'door-div');
+                    createDetectionDiv(scaledRect, 'door-div');
                 } else if (isDrawer(rect)) {
                     drawersDetected.push(scaledRect);
-                    createDetectionDiv(container, scaledRect, 'drawer-div');
+                    createDetectionDiv(scaledRect, 'drawer-div');
                 }
             }
-
-            // Update results display
-            updateResults();
             
             // Cleanup
-            src.delete();
-            gray.delete();
             processed.delete();
             contours.delete();
             hierarchy.delete();
         }
         
-        function preprocessImage(gray) {
-            // Create copy to work with
-            let processed = gray.clone();
-            
-            // Apply Gaussian blur to reduce noise
+        function processHoughMethod(src, gray, imgElement) {
+            // Apply Gaussian blur
             let blurred = new cv.Mat();
-            let ksize = new cv.Size(config.blurSize, config.blurSize);
-            cv.GaussianBlur(processed, blurred, ksize, 0);
-            
-            // Apply adaptive threshold if enabled
-            if (config.useAdaptiveThreshold) {
-                let binary = new cv.Mat();
-                cv.adaptiveThreshold(
-                    blurred, 
-                    binary, 
-                    255, 
-                    cv.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                    cv.THRESH_BINARY_INV, 
-                    11, 
-                    2
-                );
-                blurred.delete();
-                blurred = binary;
-            }
+            let ksize = new cv.Size(houghConfig.blurSize, houghConfig.blurSize);
+            cv.GaussianBlur(gray, blurred, ksize, 0);
             
             // Apply Canny edge detection
             let edges = new cv.Mat();
-            cv.Canny(blurred, edges, config.cannyLow, config.cannyHigh);
+            cv.Canny(blurred, edges, houghConfig.cannyLow, houghConfig.cannyHigh);
             
-            // Dilate the edges to connect them
-            let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
-            let dilated = new cv.Mat();
-            cv.dilate(edges, dilated, kernel, new cv.Point(-1, -1), 2);
-            
-            // Cleanup
-            processed.delete();
-            blurred.delete();
-            edges.delete();
-            kernel.delete();
-            
-            return dilated;
-        }
-        
-        function isDoor(rect) {
-            const aspectRatio = rect.width / rect.height;
-            
-            // Check if it matches door criteria
-            return (
-                rect.width >= config.minDoorWidth && 
-                rect.width <= config.maxDoorWidth &&
-                rect.height >= config.minDoorHeight && 
-                rect.height <= config.maxDoorHeight &&
-                aspectRatio >= 0.3 && 
-                aspectRatio <= 0.8
+            // Apply Hough Line Transform (P)
+            let lines = new cv.Mat();
+            cv.HoughLinesP(
+                edges, 
+                lines, 
+                1, 
+                Math.PI / 180, 
+                houghConfig.houghThreshold,
+                houghConfig.minLineLength,
+                houghConfig.maxLineGap
             );
-        }
-        
-        function isDrawer(rect) {
-            const aspectRatio = rect.width / rect.height;
             
-            // Check if it matches drawer criteria
-            return (
-                rect.height >= config.minDrawerHeight && 
-                rect.height <= config.maxDrawerHeight &&
-                aspectRatio >= 1.5 && 
-                aspectRatio <= 5
-            );
-        }
-        
-        function createDetectionDiv(container, rect, className) {
-            const div = document.createElement('div');
-            div.className = className;
-            div.style.left = rect.x + 'px';
-            div.style.top = rect.y + 'px';
-            div.style.width = rect.width + 'px';
-            div.style.height = rect.height + 'px';
-            container.appendChild(div);
-        }
-        
-        function updateResults() {
-            const output = document.getElementById('output');
-            output.innerText = `Detected: ${doorsDetected.length} doors and ${drawersDetected.length} drawers`;
+            // Process the detected lines
+            let horizontalLines = [];
+            let verticalLines = [];
             
-            // Update detection summary
-            const summary = document.getElementById('detectionSummary');
-            summary.innerHTML = `
-                <strong>Detection Results:</strong><br>
-                - Doors: ${doorsDetected.length} (green)<br>
-                - Drawers: ${drawersDetected.length} (orange)<br>
-                <br>
-                <strong>Tip:</strong> If detection is not accurate, try:
-                <ul>
-                    <li>Adjusting Canny thresholds for better edge detection</li>
-                    <li>Increasing blur size if there's noise in the image</li>
-                    <li>Adjusting door/drawer size parameters</li>
-                </ul>
-            `;
-        }
-    </script>
-
-    <script src="https://docs.opencv.org/4.5.5/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
-</body>
-</html>
+            for (let i = 0; i < lines.rows; i++) {
+                let line = [
+                    lines.data32S[i * 4],     // x1
+                    lines.data32S[i * 4 + 1], // y1
+                    lines.data32S[i * 4 + 2], // x2
+                    lines.data32S[i * 4 + 3]  // y2
+                ];
+                
+                const angle = Math.abs(Math.atan2(line[3] - line[1], line[2] - line[0]) * 180 / Math.PI);
+                
+                // Filter lines by angle if requested
+                if (houghConfig.onlyVerticalHorizontal) {
+                    if (angle < 30 || angle > 150) {
+                        horizontalLines.push(line);
+                    } else if (angle > 60 && angle < 120) {
+                        verticalLines.push(line);
+                    }
+                } else {
+                    // Filter by custom angle range
+                    if (angle >= houghConfig.minLineAngle && angle <= houghConfig.maxLineAngle) {
+                        if (angle < 45 || angle > 135) {
+                            horizontalLines.push(line);
+                        } else {
+                            verticalLines.push(line);
+                        }
+                    }
+                }
+                
+                // Draw line if needed
+                if (houghConfig.showLines) {
+                    const scaleX = imgElement.width / src.
